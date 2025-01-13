@@ -39,7 +39,8 @@ RUN apt-get update && apt-get install -y \
     libnss3 \
     lsb-release \
     xdg-utils \
-    wget
+    wget \
+    libgbm1  # Add this line to install the missing library
 
 WORKDIR /usr/src/app
 
@@ -52,3 +53,4 @@ COPY . .
 EXPOSE 3000
 
 CMD [ "node", "server.js" ]
+
