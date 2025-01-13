@@ -136,19 +136,12 @@ async function searchAndDownloadMovie(movieName) {
         console.error("Stack trace:", error.stack);
         throw error;
     } finally {
-        console.log("Leaving browser open for debugging...");
-        // Keep the browser open for 1 hour (3600000 ms)
-        await new Promise(resolve => setTimeout(resolve, 3600000));
-
+        console.log("Closing the browser...");
         if (browser && browser.isConnected()) {
             await browser.close();
         }
     }
 }
-
-const app = express();
-app.use(cors());
-app.use(bodyParser.json());
 
 app.post('/download', async (req, res) => {
     const { movieTitle } = req.body;
@@ -174,5 +167,3 @@ app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
 
-// Example usage (uncomment to test)
-// searchAndDownloadMovie('Inception').then(console.log).catch(console.error);
