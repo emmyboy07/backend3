@@ -94,20 +94,32 @@ async function searchAndDownloadMovie(movieName) {
 
             console.log("Waiting for quality options...");
             await retryAction(async () => {
-                await page.waitForSelector('.pc-quality-list .pc-itm', { timeout: 10000 });
-                const qualityOptions = await page.$$('.pc-quality-list .pc-itm');
-                if (qualityOptions.length === 0) throw new Error("No quality options available.");
-                const randomIndex = Math.floor(Math.random() * qualityOptions.length);
-                const selectedOption = qualityOptions[randomIndex];
-                const resolution = await selectedOption.$eval('.pc-resolution', (el) => el.textContent.trim());
-                console.log(`Randomly selected resolution: ${resolution}`);
-                await selectedOption.click();
-                return resolution;
+                try {
+                    await page.waitForSelector('.pc-quality-list .pc-itm', { timeout: 30000 });
+                } catch (error) {
+                    console.warn("Quality options not found, retrying download button...");
+                    const downloadButton = await page.$('.flx-ce-ce.pc-download-btn');
+                    if (downloadButton) {
+                        await downloadButton.click();
+                    }
+                    throw error;
+                }
             });
         }
 
-        const selectedResolution = await retryAction(initiateDownload);
+        await retryAction(initiateDownload);
 
+        console.log("Selecting a random quality...");
+        const selectedResolution = await retryAction(async () => {
+            const qualityOptions = await page.$$('.pc-quality-list .pc-itm');
+            if (qualityOptions.length === 0) throw new Error("No quality options available.");
+            const randomIndex = Math.floor(Math.random() * qualityOptions.length);
+            const selectedOption = qualityOptions[randomIndex];
+            const resolution = await selectedOption.$eval('.pc-resolution', (el) => el.textContent.trim());
+            console.log(`Randomly selected resolution: ${resolution}`);
+            await selectedOption.click();
+            return resolution;
+        });
 
         // Simulate download process
         console.log("Starting download simulation...");
@@ -124,7 +136,10 @@ async function searchAndDownloadMovie(movieName) {
         console.error("Stack trace:", error.stack);
         throw error;
     } finally {
-        console.log("Closing the browser...");
+        console.log("Leaving browser open for debugging...");
+        // Keep the browser open for 1 hour (3600000 ms)
+        await new Promise(resolve => setTimeout(resolve, 3600000));
+
         if (browser && browser.isConnected()) {
             await browser.close();
         }
@@ -155,3 +170,5 @@ app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
 
+// Example usage (uncomment to test)
+// searchAndDownloadMovie('Inception').then(console.log).catch(console.error);
