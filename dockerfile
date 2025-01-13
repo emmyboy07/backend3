@@ -1,4 +1,3 @@
-# Use an official Node.js runtime as the base image
 FROM node:14
 
 # Install dependencies required for Puppeteer
@@ -42,21 +41,14 @@ RUN apt-get update && apt-get install -y \
     xdg-utils \
     wget
 
-# Set the working directory in the container
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json to the working directory
 COPY package*.json ./
 
-# Install the application dependencies
 RUN npm install
 
-# Copy the application files to the working directory
 COPY . .
 
-# Expose the port the app runs on
 EXPOSE 3000
 
-# Define the command to run the application
 CMD [ "node", "server.js" ]
-

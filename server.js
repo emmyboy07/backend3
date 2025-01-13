@@ -1,8 +1,11 @@
 const puppeteer = require('puppeteer');
-const path = require('path');
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+
+const app = express();
+app.use(cors());
+app.use(bodyParser.json());
 
 // Retry action function to handle retries
 async function retryAction(action, retries = 3, delay = 2000) {
@@ -24,11 +27,11 @@ async function retryAction(action, retries = 3, delay = 2000) {
 // Main function to search and simulate movie download
 async function searchAndDownloadMovie(movieName) {
     const browser = await puppeteer.launch({
-        executablePath: '/path/to/Chrome', // Path to Chrome or Chromium executable
         headless: true,
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
             '--disable-blink-features=AutomationControlled',
             '--disable-web-security',
             '--allow-running-insecure-content',
@@ -112,14 +115,6 @@ async function searchAndDownloadMovie(movieName) {
     }
 }
 
-// Express app setup
-const app = express();
-app.use(cors());
-app.use(bodyParser.json());
-
-// Serve static frontend files (optional if you have a frontend)
-app.use(express.static(path.join(__dirname, 'public')));
-
 app.post('/download', async (req, res) => {
     const { movieTitle } = req.body;
     if (!movieTitle) {
@@ -138,3 +133,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
+
