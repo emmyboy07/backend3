@@ -41,28 +41,22 @@ async function searchAndDownloadMovie(movieName) {
     const page = await browser.newPage();
 
     try {
-        await retryAction(() => page.setViewport({ width: 1280, height: 800 }));
-        await retryAction(() =>
-            page.setUserAgent(
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            )
-        );
+        await page.setViewport({ width: 1280, height: 800 });
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
 
         console.log('Navigating to MovieBox...');
-        await retryAction(() =>
-            page.goto('https://moviebox.ng', { waitUntil: 'load', timeout: 60000 })
-        );
+        await page.goto('https://moviebox.ng', { waitUntil: 'networkidle2', timeout: 60000 });
 
         console.log('Searching for movie...');
         await retryAction(async () => {
-            const searchInput = await page.waitForSelector('.pc-search-input', { timeout: 5000 });
+            const searchInput = await page.waitForSelector('.pc-search-input', { visible: true, timeout: 10000 });
             await searchInput.focus();
             await searchInput.type(movieName);
             await page.keyboard.press('Enter');
         });
 
         console.log('Waiting for search results...');
-        await retryAction(() => page.waitForSelector('.pc-card', { timeout: 15000 }));
+        await page.waitForSelector('.pc-card', { visible: true, timeout: 20000 });
 
         const movieCards = await page.$$('.pc-card');
         if (movieCards.length === 0) {
@@ -73,23 +67,33 @@ async function searchAndDownloadMovie(movieName) {
         await retryAction(async () => {
             const watchNowButton = await movieCards[0].$('.pc-card-btn');
             if (!watchNowButton) throw new Error("No 'Watch Now' button found.");
-            await watchNowButton.click();
+            await Promise.all([
+                page.waitForNavigation({ waitUntil: 'networkidle2' }),
+                watchNowButton.click()
+            ]);
         });
 
         console.log('Waiting for the movie details page...');
-        await retryAction(() => page.waitForSelector('.flx-ce-ce.pc-download-btn', { timeout: 30000 }));
+        await page.waitForSelector('.flx-ce-ce.pc-download-btn', { visible: true, timeout: 30000 });
 
         console.log('Clicking the download button...');
         await retryAction(async () => {
             const downloadButton = await page.$('.flx-ce-ce.pc-download-btn');
             if (!downloadButton) throw new Error('No download button found.');
-            await downloadButton.click();
+            await Promise.all([
+                page.waitForNavigation({ waitUntil: 'networkidle2' }),
+                downloadButton.click()
+            ]);
         });
 
         console.log('Selecting download quality...');
         const selectedResolution = await retryAction(async () => {
+            await page.waitForSelector('.pc-quality-list .pc-itm', { visible: true, timeout: 20000 });
             const qualityOptions = await page.$$('.pc-quality-list .pc-itm');
-            if (qualityOptions.length === 0) throw new Error('No quality options available.');
+            if (qualityOptions.length === 0) {
+                console.log('Page content:', await page.content());
+                throw new Error('No quality options available.');
+            }
             const randomIndex = Math.floor(Math.random() * qualityOptions.length);
             const selectedOption = qualityOptions[randomIndex];
             const resolution = await selectedOption.$eval('.pc-resolution', el => el.textContent.trim());
@@ -99,10 +103,7 @@ async function searchAndDownloadMovie(movieName) {
         });
 
         console.log('Simulating download...');
-        const fakeDownloadLink = `https://example.com/download/${movieName.replace(
-            /\s+/g,
-            '-'
-        )}-${selectedResolution}.mp4`;
+        const fakeDownloadLink = `https://example.com/download/${movieName.replace(/\s+/g, '-')}-${selectedResolution}.mp4`;
 
         return { downloadLink: fakeDownloadLink, resolution: selectedResolution };
     } catch (error) {
