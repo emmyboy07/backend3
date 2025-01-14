@@ -1,7 +1,8 @@
+# Use an official Node.js runtime as a parent image
 FROM node:14
 
 # Install dependencies required for Puppeteer
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gconf-service \
     libasound2 \
     libatk1.0-0 \
@@ -40,17 +41,23 @@ RUN apt-get update && apt-get install -y \
     lsb-release \
     xdg-utils \
     wget \
-    libgbm1  # Add this line to install the missing library
+    libgbm1 && \
+    rm -rf /var/lib/apt/lists/*
 
+# Set the working directory inside the container
 WORKDIR /usr/src/app
 
+# Copy package.json and package-lock.json to the working directory
 COPY package*.json ./
 
-RUN npm install
+# Install all dependencies (including development dependencies)
+RUN npm install && npm cache clean --force
 
+# Copy the application code to the working directory
 COPY . .
 
+# Expose port 3000 for the application
 EXPOSE 3000
 
+# Start the application
 CMD [ "node", "server.js" ]
-
