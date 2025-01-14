@@ -34,7 +34,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxrender1 \
     libxss1 \
     libxtst6 \
-    libxshmfence1 \ # Added this missing library
+    libxshmfence1 \ 
     ca-certificates \
     fonts-liberation \
     libappindicator1 \
